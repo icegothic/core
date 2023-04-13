@@ -31,6 +31,7 @@ from homeassistant.exceptions import (
     PlatformNotReady,
     RequiredParameterMissing,
 )
+from homeassistant.generated import languages
 from homeassistant.setup import async_start_setup
 from homeassistant.util.async_ import run_callback_threadsafe
 
@@ -127,6 +128,7 @@ class EntityPlatform:
         self.config_entry: config_entries.ConfigEntry | None = None
         self.entities: dict[str, Entity] = {}
         self.entity_translations: dict[str, Any] = {}
+        self.object_id_entity_translations: dict[str, Any] = {}
         self._tasks: list[asyncio.Task[None]] = []
         # Stop tracking tasks after setup is completed
         self._setup_complete = False
@@ -293,6 +295,11 @@ class EntityPlatform:
         logger = self.logger
         hass = self.hass
         full_name = f"{self.domain}.{self.platform_name}"
+        object_id_language = (
+            hass.config.language
+            if hass.config.language in languages.NATIVE_ENTITY_IDS
+            else languages.DEFAULT_LANGUAGE
+        )
 
         try:
             self.entity_translations = await translation.async_get_translations(
@@ -302,6 +309,21 @@ class EntityPlatform:
             _LOGGER.debug(
                 "Could not load translations for %s", self.platform_name, exc_info=err
             )
+        if object_id_language == hass.config.language:
+            self.object_id_entity_translations = self.entity_translations
+        else:
+            try:
+                self.object_id_entity_translations = (
+                    await translation.async_get_translations(
+                        hass, object_id_language, "entity", {self.platform_name}
+                    )
+                )
+            except Exception as err:  # pylint: disable=broad-exception-caught
+                _LOGGER.debug(
+                    "Could not load translations for %s",
+                    self.platform_name,
+                    exc_info=err,
+                )
 
         logger.info("Setting up %s", full_name)
         warn_task = hass.loop.call_at(
@@ -639,9 +661,11 @@ class EntityPlatform:
                     if not entity.name:
                         suggested_object_id = device_name
                     else:
-                        suggested_object_id = f"{device_name} {entity.name}"
+                        suggested_object_id = (
+                            f"{device_name} {entity.suggested_object_id_input}"
+                        )
                 if not suggested_object_id:
-                    suggested_object_id = entity.name
+                    suggested_object_id = entity.suggested_object_id_input
 
             if self.entity_namespace is not None:
                 suggested_object_id = f"{self.entity_namespace} {suggested_object_id}"
@@ -696,7 +720,9 @@ class EntityPlatform:
         # Generate entity ID
         if entity.entity_id is None or generate_new_entity_id:
             suggested_object_id = (
-                suggested_object_id or entity.name or DEVICE_DEFAULT_NAME
+                suggested_object_id
+                or entity.suggested_object_id_input
+                or DEVICE_DEFAULT_NAME
             )
 
             if self.entity_namespace is not None:

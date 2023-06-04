@@ -47,7 +47,7 @@ class IPPSensorEntityDescription(
 ):
     """Describes IPP sensor entity."""
 
-    attributes_fn: Callable[[Any], dict[Any, StateType]] | None = None
+    attributes_fn: Callable[[Any], dict[Any, StateType]] = lambda _: {}
 
 
 PRINTER_SENSORS: tuple[IPPSensorEntityDescription, ...] = (
@@ -73,8 +73,8 @@ PRINTER_SENSORS: tuple[IPPSensorEntityDescription, ...] = (
         name="Uptime",
         icon="mdi:clock-outline",
         device_class=SensorDeviceClass.TIMESTAMP,
-        entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
         attributes_fn=lambda printer: {
             ATTR_INFO: printer.info.printer_info,
             ATTR_SERIAL: printer.info.serial,
@@ -164,9 +164,6 @@ class IPPSensor(IPPEntity, SensorEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return the state attributes of the entity."""
-        if self.entity_description.attributes_fn is None:
-            return {}
-
         return self.entity_description.attributes_fn(self.coordinator.data)
 
     @property
@@ -203,9 +200,6 @@ class IPPMarkerSensor(IPPEntity, SensorEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return the state attributes of the entity."""
-        if self.entity_description.attributes_fn is None:
-            return {}
-
         return self.entity_description.attributes_fn(
             self.coordinator.data.markers[self.marker_index]
         )

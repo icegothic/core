@@ -4,11 +4,7 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.ipp.const import DOMAIN
-from homeassistant.components.sensor import (
-    ATTR_OPTIONS as SENSOR_ATTR_OPTIONS,
-    DOMAIN as SENSOR_DOMAIN,
-)
+from homeassistant.components.sensor import ATTR_OPTIONS
 from homeassistant.const import (
     ATTR_ICON,
     ATTR_UNIT_OF_MEASUREMENT,
@@ -44,7 +40,7 @@ async def test_sensors(
     assert state
     assert state.attributes.get(ATTR_ICON) == "mdi:printer"
     assert state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) is None
-    assert state.attributes.get(SENSOR_ATTR_OPTIONS) == ["idle", "printing", "stopped"]
+    assert state.attributes.get(ATTR_OPTIONS) == ["idle", "printing", "stopped"]
 
     entry = entity_registry.async_get("sensor.epson_xp_6000_series")
     assert entry

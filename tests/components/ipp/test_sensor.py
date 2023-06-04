@@ -7,7 +7,12 @@ from homeassistant.components.sensor import (
     ATTR_OPTIONS as SENSOR_ATTR_OPTIONS,
     DOMAIN as SENSOR_DOMAIN,
 )
-from homeassistant.const import ATTR_ICON, ATTR_UNIT_OF_MEASUREMENT, PERCENTAGE
+from homeassistant.const import (
+    ATTR_ICON,
+    ATTR_UNIT_OF_MEASUREMENT,
+    PERCENTAGE,
+    EntityCategory,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
@@ -89,6 +94,7 @@ async def test_sensors(
     entry = registry.async_get("sensor.epson_xp_6000_series_uptime")
     assert entry
     assert entry.unique_id == "cfe92100-67c4-11d4-a45f-f8d027761251_uptime"
+    assert entry.entity_category == EntityCategory.DIAGNOSTIC
 
 
 async def test_disabled_by_default_sensors(

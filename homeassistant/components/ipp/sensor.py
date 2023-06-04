@@ -7,13 +7,14 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from homeassistant.components.sensor import (
+    RestoreSensor,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_LOCATION, PERCENTAGE, EntityCategory
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 from homeassistant.util.dt import utcnow
@@ -135,7 +136,7 @@ async def async_setup_entry(
             )
         )
 
-    async_add_entities(sensors, True)
+    async_add_entities(sensors)
 
 
 class IPPSensor(IPPEntity, SensorEntity):
@@ -172,7 +173,7 @@ class IPPSensor(IPPEntity, SensorEntity):
         return self.entity_description.value_fn(self.coordinator.data)
 
 
-class IPPMarkerSensor(IPPEntity, SensorEntity):
+class IPPMarkerSensor(IPPEntity, RestoreSensor):
     """Defines an IPP marker sensor."""
 
     entity_description: IPPSensorEntityDescription
@@ -197,16 +198,22 @@ class IPPMarkerSensor(IPPEntity, SensorEntity):
 
         self._attr_unique_id = f"{device_id}_{description.key}"
 
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return the state attributes of the entity."""
-        return self.entity_description.attributes_fn(
-            self.coordinator.data.markers[self.marker_index]
-        )
+    async def async_added_to_hass(self) -> None:
+        """Handle entity which will be added."""
+        await super().async_added_to_hass()
 
-    @property
-    def native_value(self) -> StateType | datetime:
-        """Return the state of the sensor."""
-        return self.entity_description.value_fn(
-            self.coordinator.data.markers[self.marker_index]
-        )
+        if self.coordinator.data is None:
+            if (last_sensor_data := await self.async_get_last_sensor_data()) is not None:
+                self._attr_native_value = last_sensor_data.native_value
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        if self.coordinator.data is not None:
+            self._attr_native_value = self.entity_description.value_fn(
+                self.coordinator.data.markers[self.marker_index]
+            )
+            self._attr_extra_state_attributes = self.entity_description.attributes_fn(
+                self.coordinator.data.markers[self.marker_index]
+            )
+            self.async_write_ha_state()

@@ -2,6 +2,8 @@
 from datetime import datetime
 from unittest.mock import patch
 
+import pytest
+
 from homeassistant.components.ipp.const import DOMAIN
 from homeassistant.components.sensor import (
     ATTR_OPTIONS as SENSOR_ATTR_OPTIONS,
@@ -22,23 +24,16 @@ from . import init_integration, mock_connection
 from tests.test_util.aiohttp import AiohttpClientMocker
 
 
+@pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensors(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    hass: HomeAssistant, 
+    aioclient_mock: AiohttpClientMocker,
+    entity_registry: er.EntityRegistry,
 ) -> None:
     """Test the creation and values of the IPP sensors."""
     mock_connection(aioclient_mock)
 
     entry = await init_integration(hass, aioclient_mock, skip_setup=True)
-    registry = er.async_get(hass)
-
-    # Pre-create registry entries for disabled by default sensors
-    registry.async_get_or_create(
-        SENSOR_DOMAIN,
-        DOMAIN,
-        "cfe92100-67c4-11d4-a45f-f8d027761251_uptime",
-        suggested_object_id="epson_xp_6000_series_uptime",
-        disabled_by=None,
-    )
 
     test_time = datetime(2019, 11, 11, 9, 10, 32, tzinfo=dt_util.UTC)
     with patch("homeassistant.components.ipp.sensor.utcnow", return_value=test_time):
@@ -51,7 +46,7 @@ async def test_sensors(
     assert state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) is None
     assert state.attributes.get(SENSOR_ATTR_OPTIONS) == ["idle", "printing", "stopped"]
 
-    entry = registry.async_get("sensor.epson_xp_6000_series")
+    entry = entity_registry.async_get("sensor.epson_xp_6000_series")
     assert entry
     assert entry.translation_key == "printer"
 
@@ -91,7 +86,7 @@ async def test_sensors(
     assert state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) is None
     assert state.state == "2019-10-26T15:37:00+00:00"
 
-    entry = registry.async_get("sensor.epson_xp_6000_series_uptime")
+    entry = entity_registry.async_get("sensor.epson_xp_6000_series_uptime")
     assert entry
     assert entry.unique_id == "cfe92100-67c4-11d4-a45f-f8d027761251_uptime"
     assert entry.entity_category == EntityCategory.DIAGNOSTIC

@@ -203,7 +203,9 @@ class IPPMarkerSensor(IPPEntity, RestoreSensor):
         await super().async_added_to_hass()
 
         if self.coordinator.data is None:
-            if (last_sensor_data := await self.async_get_last_sensor_data()) is not None:
+            if (
+                last_sensor_data := await self.async_get_last_sensor_data()
+            ) is not None:
                 self._attr_native_value = last_sensor_data.native_value
 
     @callback

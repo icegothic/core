@@ -4,6 +4,11 @@ from unittest.mock import patch
 
 import pytest
 
+from homeassistant.components.ipp.const import (
+    ATTR_MARKER_HIGH_LEVEL,
+    ATTR_MARKER_LOW_LEVEL,
+    ATTR_MARKER_TYPE,
+)
 from homeassistant.components.sensor import ATTR_OPTIONS
 from homeassistant.const import (
     ATTR_ICON,
@@ -11,12 +16,13 @@ from homeassistant.const import (
     PERCENTAGE,
     EntityCategory,
 )
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, State
 from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
 
 from . import init_integration, mock_connection
 
+from tests.common import mock_restore_cache_with_extra_data
 from tests.test_util.aiohttp import AiohttpClientMocker
 
 
@@ -114,3 +120,67 @@ async def test_missing_entry_unique_id(
     entity = registry.async_get("sensor.epson_xp_6000_series")
     assert entity
     assert entity.unique_id == f"{entry.entry_id}_printer"
+
+
+@pytest.mark.parametrize(
+    (
+        "entity_id",
+        "restored_state",
+        "restored_native_value",
+        "initial_state",
+        "initial_attributes",
+    ),
+    (
+        (
+            "sensor.epson_xp_6000_series_black_ink",
+            "43",
+            43,
+            "43",
+            [
+                ATTR_ICON,
+                ATTR_MARKER_HIGH_LEVEL,
+                ATTR_MARKER_LOW_LEVEL,
+                ATTR_MARKER_TYPE,
+            ],
+        ),
+    ),
+)
+async def test_restore_marker_state(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    entity_id: str,
+    restored_state: str,
+    restored_native_value: str,
+    initial_state: str,
+    initial_attributes: list,
+) -> None:
+    """Test sensor restore state."""
+    restored_attributes = {
+        ATTR_ICON: "mdi:water",
+        ATTR_MARKER_HIGH_LEVEL: 100,
+        ATTR_MARKER_LOW_LEVEL: 10,
+        ATTR_MARKER_TYPE: "ink",
+    }
+
+    fake_state = State(
+        entity_id,
+        restored_state,
+        restored_attributes,
+    )
+
+    fake_extra_data = {
+        "native_value": restored_native_value,
+        "native_unit_of_measurement": PERCENTAGE,
+    }
+
+    mock_restore_cache_with_extra_data(hass, ((fake_state, fake_extra_data),))
+
+    await init_integration(hass, aioclient_mock, conn_error=True)
+
+    assert (state := hass.states.get(entity_id))
+    assert state.state == initial_state
+    for attr in restored_attributes.items():
+        if attr in initial_attributes:
+            assert state.attributes[attr] == restored_attributes[attr]
+        else:
+            assert attr not in state.attributes

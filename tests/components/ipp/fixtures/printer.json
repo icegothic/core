@@ -1,0 +1,33 @@
+{
+  "printer-uuid": "urn:uuid:cfe92100-67c4-11d4-a45f-f8d027761251",
+  "printer-state": "idle",
+  "printer-name": "Test Printer",
+  "printer-location": null,
+  "printer-make-and-model": "",
+  "printer-device-id": null,
+  "printer-uri-supported": null,
+  "uri-authentication-supported": null,
+  "uri-security-supported": null,
+  "printer-info": null,
+  "printer-up-time": 30,
+  "printer-firmware-string-version": null,
+  "printer-more-info": null,
+  "marker-names": [
+    "Black ink",
+    "Photo black ink",
+    "Cyan ink",
+    "Yellow ink",
+    "Magenta ink"
+  ],
+  "marker-types": [
+    "ink-cartridge",
+    "ink-cartridge",
+    "ink-cartridge",
+    "ink-cartridge",
+    "ink-cartridge"
+  ],
+  "marker-colors": ["#000000", "#000000", "#000000", "#000000", "#000000"],
+  "marker-levels": [58, 98, 91, 95, 73],
+  "marker-low-levels": [10, 10, 10, 10, 10],
+  "marker-high-levels": [100, 100, 100, 100, 100]
+}

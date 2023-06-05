@@ -1,6 +1,14 @@
 """Tests for the IPP config flow."""
 import dataclasses
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
+
+from pyipp import (
+    IPPConnectionError,
+    IPPConnectionUpgradeRequired,
+    IPPError,
+    IPPParseError,
+    IPPVersionNotSupportedError,
+)
 
 from homeassistant.components.ipp.const import CONF_BASE_PATH, DOMAIN
 from homeassistant.config_entries import SOURCE_USER, SOURCE_ZEROCONF
@@ -12,11 +20,9 @@ from . import (
     MOCK_USER_INPUT,
     MOCK_ZEROCONF_IPP_SERVICE_INFO,
     MOCK_ZEROCONF_IPPS_SERVICE_INFO,
-    init_integration,
-    mock_connection,
 )
 
-from tests.test_util.aiohttp import AiohttpClientMocker
+from tests.common import MockConfigEntry
 
 
 async def test_show_user_form(hass: HomeAssistant) -> None:
@@ -31,11 +37,10 @@ async def test_show_user_form(hass: HomeAssistant) -> None:
 
 
 async def test_show_zeroconf_form(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    hass: HomeAssistant,
+    mock_ipp_config_flow: MagicMock,
 ) -> None:
     """Test that the zeroconf confirmation form is served."""
-    mock_connection(aioclient_mock)
-
     discovery_info = dataclasses.replace(MOCK_ZEROCONF_IPP_SERVICE_INFO)
     result = await hass.config_entries.flow.async_init(
         DOMAIN,
@@ -49,10 +54,11 @@ async def test_show_zeroconf_form(
 
 
 async def test_connection_error(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    hass: HomeAssistant,
+    mock_ipp_config_flow: MagicMock,
 ) -> None:
     """Test we show user form on IPP connection error."""
-    mock_connection(aioclient_mock, conn_error=True)
+    mock_ipp_config_flow.printer.side_effect = IPPConnectionError
 
     user_input = MOCK_USER_INPUT.copy()
     result = await hass.config_entries.flow.async_init(
@@ -67,10 +73,11 @@ async def test_connection_error(
 
 
 async def test_zeroconf_connection_error(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    hass: HomeAssistant,
+    mock_ipp_config_flow: MagicMock,
 ) -> None:
     """Test we abort zeroconf flow on IPP connection error."""
-    mock_connection(aioclient_mock, conn_error=True)
+    mock_ipp_config_flow.printer.side_effect = IPPConnectionError
 
     discovery_info = dataclasses.replace(MOCK_ZEROCONF_IPP_SERVICE_INFO)
     result = await hass.config_entries.flow.async_init(
@@ -84,10 +91,11 @@ async def test_zeroconf_connection_error(
 
 
 async def test_zeroconf_confirm_connection_error(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    hass: HomeAssistant,
+    mock_ipp_config_flow: MagicMock,
 ) -> None:
     """Test we abort zeroconf flow on IPP connection error."""
-    mock_connection(aioclient_mock, conn_error=True)
+    mock_ipp_config_flow.printer.side_effect = IPPConnectionError
 
     discovery_info = dataclasses.replace(MOCK_ZEROCONF_IPP_SERVICE_INFO)
     result = await hass.config_entries.flow.async_init(
@@ -99,10 +107,11 @@ async def test_zeroconf_confirm_connection_error(
 
 
 async def test_user_connection_upgrade_required(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    hass: HomeAssistant,
+    mock_ipp_config_flow: MagicMock,
 ) -> None:
     """Test we show the user form if connection upgrade required by server."""
-    mock_connection(aioclient_mock, conn_upgrade_error=True)
+    mock_ipp_config_flow.printer.side_effect = IPPConnectionUpgradeRequired
 
     user_input = MOCK_USER_INPUT.copy()
     result = await hass.config_entries.flow.async_init(
@@ -117,10 +126,11 @@ async def test_user_connection_upgrade_required(
 
 
 async def test_zeroconf_connection_upgrade_required(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    hass: HomeAssistant,
+    mock_ipp_config_flow: MagicMock,
 ) -> None:
     """Test we abort zeroconf flow on IPP connection error."""
-    mock_connection(aioclient_mock, conn_upgrade_error=True)
+    mock_ipp_config_flow.printer.side_effect = IPPConnectionUpgradeRequired
 
     discovery_info = dataclasses.replace(MOCK_ZEROCONF_IPP_SERVICE_INFO)
     result = await hass.config_entries.flow.async_init(
@@ -134,10 +144,11 @@ async def test_zeroconf_connection_upgrade_required(
 
 
 async def test_user_parse_error(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    hass: HomeAssistant,
+    mock_ipp_config_flow: MagicMock,
 ) -> None:
     """Test we abort user flow on IPP parse error."""
-    mock_connection(aioclient_mock, parse_error=True)
+    mock_ipp_config_flow.printer.side_effect = IPPParseError
 
     user_input = MOCK_USER_INPUT.copy()
     result = await hass.config_entries.flow.async_init(
@@ -151,10 +162,11 @@ async def test_user_parse_error(
 
 
 async def test_zeroconf_parse_error(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    hass: HomeAssistant,
+    mock_ipp_config_flow: MagicMock,
 ) -> None:
     """Test we abort zeroconf flow on IPP parse error."""
-    mock_connection(aioclient_mock, parse_error=True)
+    mock_ipp_config_flow.printer.side_effect = IPPParseError
 
     discovery_info = dataclasses.replace(MOCK_ZEROCONF_IPP_SERVICE_INFO)
     result = await hass.config_entries.flow.async_init(
@@ -168,10 +180,11 @@ async def test_zeroconf_parse_error(
 
 
 async def test_user_ipp_error(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    hass: HomeAssistant,
+    mock_ipp_config_flow: MagicMock,
 ) -> None:
     """Test we abort the user flow on IPP error."""
-    mock_connection(aioclient_mock, ipp_error=True)
+    mock_ipp_config_flow.printer.side_effect = IPPError
 
     user_input = MOCK_USER_INPUT.copy()
     result = await hass.config_entries.flow.async_init(
@@ -185,10 +198,11 @@ async def test_user_ipp_error(
 
 
 async def test_zeroconf_ipp_error(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    hass: HomeAssistant,
+    mock_ipp_config_flow: MagicMock,
 ) -> None:
     """Test we abort zeroconf flow on IPP error."""
-    mock_connection(aioclient_mock, ipp_error=True)
+    mock_ipp_config_flow.printer.side_effect = IPPError
 
     discovery_info = dataclasses.replace(MOCK_ZEROCONF_IPP_SERVICE_INFO)
     result = await hass.config_entries.flow.async_init(
@@ -202,10 +216,11 @@ async def test_zeroconf_ipp_error(
 
 
 async def test_user_ipp_version_error(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    hass: HomeAssistant,
+    mock_ipp_config_flow: MagicMock,
 ) -> None:
     """Test we abort user flow on IPP version not supported error."""
-    mock_connection(aioclient_mock, version_not_supported=True)
+    mock_ipp_config_flow.printer.side_effect = IPPVersionNotSupportedError
 
     user_input = {**MOCK_USER_INPUT}
     result = await hass.config_entries.flow.async_init(
@@ -219,10 +234,11 @@ async def test_user_ipp_version_error(
 
 
 async def test_zeroconf_ipp_version_error(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    hass: HomeAssistant,
+    mock_ipp_config_flow: MagicMock,
 ) -> None:
     """Test we abort zeroconf flow on IPP version not supported error."""
-    mock_connection(aioclient_mock, version_not_supported=True)
+    mock_ipp_config_flow.printer.side_effect = IPPVersionNotSupportedError
 
     discovery_info = dataclasses.replace(MOCK_ZEROCONF_IPP_SERVICE_INFO)
     result = await hass.config_entries.flow.async_init(
@@ -236,10 +252,12 @@ async def test_zeroconf_ipp_version_error(
 
 
 async def test_user_device_exists_abort(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_ipp_config_flow: MagicMock,
 ) -> None:
     """Test we abort user flow if printer already configured."""
-    await init_integration(hass, aioclient_mock, skip_setup=True)
+    mock_config_entry.add_to_hass(hass)
 
     user_input = MOCK_USER_INPUT.copy()
     result = await hass.config_entries.flow.async_init(
@@ -253,10 +271,12 @@ async def test_user_device_exists_abort(
 
 
 async def test_zeroconf_device_exists_abort(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_ipp_config_flow: MagicMock,
 ) -> None:
     """Test we abort zeroconf flow if printer already configured."""
-    await init_integration(hass, aioclient_mock, skip_setup=True)
+    mock_config_entry.add_to_hass(hass)
 
     discovery_info = dataclasses.replace(MOCK_ZEROCONF_IPP_SERVICE_INFO)
     result = await hass.config_entries.flow.async_init(
@@ -270,10 +290,12 @@ async def test_zeroconf_device_exists_abort(
 
 
 async def test_zeroconf_with_uuid_device_exists_abort(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_ipp_config_flow: MagicMock,
 ) -> None:
     """Test we abort zeroconf flow if printer already configured."""
-    await init_integration(hass, aioclient_mock, skip_setup=True)
+    mock_config_entry.add_to_hass(hass)
 
     discovery_info = dataclasses.replace(MOCK_ZEROCONF_IPP_SERVICE_INFO)
     discovery_info.properties = {
@@ -292,10 +314,12 @@ async def test_zeroconf_with_uuid_device_exists_abort(
 
 
 async def test_zeroconf_empty_unique_id(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    hass: HomeAssistant,
+    mock_ipp_config_flow: MagicMock,
 ) -> None:
     """Test zeroconf flow if printer lacks (empty) unique identification."""
-    mock_connection(aioclient_mock, no_unique_id=True)
+    printer = mock_ipp_config_flow.printer.return_value
+    printer.unique_id = None
 
     discovery_info = dataclasses.replace(MOCK_ZEROCONF_IPP_SERVICE_INFO)
     discovery_info.properties = {
@@ -312,10 +336,12 @@ async def test_zeroconf_empty_unique_id(
 
 
 async def test_zeroconf_no_unique_id(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    hass: HomeAssistant,
+    mock_ipp_config_flow: MagicMock,
 ) -> None:
     """Test zeroconf flow if printer lacks unique identification."""
-    mock_connection(aioclient_mock, no_unique_id=True)
+    printer = mock_ipp_config_flow.printer.return_value
+    printer.unique_id = None
 
     discovery_info = dataclasses.replace(MOCK_ZEROCONF_IPP_SERVICE_INFO)
     result = await hass.config_entries.flow.async_init(
@@ -328,11 +354,10 @@ async def test_zeroconf_no_unique_id(
 
 
 async def test_full_user_flow_implementation(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    hass: HomeAssistant,
+    mock_ipp_config_flow: MagicMock,
 ) -> None:
     """Test the full manual user flow from start to finish."""
-    mock_connection(aioclient_mock)
-
     result = await hass.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
@@ -359,11 +384,10 @@ async def test_full_user_flow_implementation(
 
 
 async def test_full_zeroconf_flow_implementation(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    hass: HomeAssistant,
+    mock_ipp_config_flow: MagicMock,
 ) -> None:
     """Test the full manual user flow from start to finish."""
-    mock_connection(aioclient_mock)
-
     discovery_info = dataclasses.replace(MOCK_ZEROCONF_IPP_SERVICE_INFO)
     result = await hass.config_entries.flow.async_init(
         DOMAIN,
@@ -393,11 +417,10 @@ async def test_full_zeroconf_flow_implementation(
 
 
 async def test_full_zeroconf_tls_flow_implementation(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    hass: HomeAssistant,
+    mock_ipp_config_flow: MagicMock,
 ) -> None:
     """Test the full manual user flow from start to finish."""
-    mock_connection(aioclient_mock, ssl=True)
-
     discovery_info = dataclasses.replace(MOCK_ZEROCONF_IPPS_SERVICE_INFO)
     result = await hass.config_entries.flow.async_init(
         DOMAIN,

@@ -2,11 +2,9 @@
 from datetime import datetime
 from unittest.mock import AsyncMock, patch
 
-from homeassistant.components.ipp.const import DOMAIN
-from homeassistant.components.sensor import (
-    ATTR_OPTIONS as SENSOR_ATTR_OPTIONS,
-    DOMAIN as SENSOR_DOMAIN,
-)
+import pytest
+
+from homeassistant.components.sensor import ATTR_OPTIONS
 from homeassistant.const import ATTR_ICON, ATTR_UNIT_OF_MEASUREMENT, PERCENTAGE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
@@ -15,24 +13,15 @@ from homeassistant.util import dt as dt_util
 from tests.common import MockConfigEntry
 
 
+@pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensors(
     hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
     mock_config_entry: MockConfigEntry,
     mock_ipp: AsyncMock,
 ) -> None:
     """Test the creation and values of the IPP sensors."""
     mock_config_entry.add_to_hass(hass)
-
-    registry = er.async_get(hass)
-
-    # Pre-create registry entries for disabled by default sensors
-    registry.async_get_or_create(
-        SENSOR_DOMAIN,
-        DOMAIN,
-        "cfe92100-67c4-11d4-a45f-f8d027761251_uptime",
-        suggested_object_id="test_printer_uptime",
-        disabled_by=None,
-    )
 
     test_time = datetime(2019, 11, 11, 9, 10, 32, tzinfo=dt_util.UTC)
     with patch("homeassistant.components.ipp.sensor.utcnow", return_value=test_time):
@@ -43,9 +32,9 @@ async def test_sensors(
     assert state
     assert state.attributes.get(ATTR_ICON) == "mdi:printer"
     assert state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) is None
-    assert state.attributes.get(SENSOR_ATTR_OPTIONS) == ["idle", "printing", "stopped"]
+    assert state.attributes.get(ATTR_OPTIONS) == ["idle", "printing", "stopped"]
 
-    entry = registry.async_get("sensor.test_printer")
+    entry = entity_registry.async_get("sensor.test_printer")
     assert entry
     assert entry.translation_key == "printer"
 
@@ -85,7 +74,7 @@ async def test_sensors(
     assert state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) is None
     assert state.state == "2019-11-11T09:10:02+00:00"
 
-    entry = registry.async_get("sensor.test_printer_uptime")
+    entry = entity_registry.async_get("sensor.test_printer_uptime")
     assert entry
     assert entry.unique_id == "cfe92100-67c4-11d4-a45f-f8d027761251_uptime"
 

@@ -984,7 +984,7 @@ hole==0.8.0
 holidays==0.21.13
 
 # homeassistant.components.frontend
-home-assistant-frontend==20230606.0
+home-assistant-frontend==20230607.0
 
 # homeassistant.components.conversation
 home-assistant-intents==2023.6.5
@@ -2184,7 +2184,7 @@ pytrafikverket==0.3.3
 pyudev==0.23.2
 
 # homeassistant.components.unifiprotect
-pyunifiprotect==4.10.0
+pyunifiprotect==4.10.1
 
 # homeassistant.components.uptimerobot
 pyuptimerobot==22.2.0
@@ -2310,7 +2310,7 @@ russound-rio==0.1.8
 russound==0.1.9
 
 # homeassistant.components.ruuvitag_ble
-ruuvitag-ble==0.1.1
+ruuvitag-ble==0.1.2
 
 # homeassistant.components.yamaha
 rxv==0.7.0

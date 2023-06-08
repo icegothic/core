@@ -662,10 +662,10 @@ class EntityPlatform:
                         suggested_object_id = device_name
                     else:
                         suggested_object_id = (
-                            f"{device_name} {entity.suggested_object_id_input}"
+                            f"{device_name} {entity.suggested_object_id}"
                         )
                 if not suggested_object_id:
-                    suggested_object_id = entity.suggested_object_id_input
+                    suggested_object_id = entity.suggested_object_id
 
             if self.entity_namespace is not None:
                 suggested_object_id = f"{self.entity_namespace} {suggested_object_id}"
@@ -720,9 +720,7 @@ class EntityPlatform:
         # Generate entity ID
         if entity.entity_id is None or generate_new_entity_id:
             suggested_object_id = (
-                suggested_object_id
-                or entity.suggested_object_id_input
-                or DEVICE_DEFAULT_NAME
+                suggested_object_id or entity.suggested_object_id or DEVICE_DEFAULT_NAME
             )
 
             if self.entity_namespace is not None:

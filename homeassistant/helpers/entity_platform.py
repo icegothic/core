@@ -301,22 +301,11 @@ class EntityPlatform:
             else languages.DEFAULT_LANGUAGE
         )
 
-        try:
-            self.entity_translations = await translation.async_get_translations(
-                hass, hass.config.language, "entity", {self.platform_name}
-            )
-        except Exception as err:  # pylint: disable=broad-exception-caught
-            _LOGGER.debug(
-                "Could not load translations for %s", self.platform_name, exc_info=err
-            )
-        if object_id_language == hass.config.language:
-            self.object_id_entity_translations = self.entity_translations
-        else:
+        async def get_translations(language: str) -> dict[str, Any]:
+            """Get entity translations."""
             try:
-                self.object_id_entity_translations = (
-                    await translation.async_get_translations(
-                        hass, object_id_language, "entity", {self.platform_name}
-                    )
+                return await translation.async_get_translations(
+                    hass, language, "entity", {self.platform_name}
                 )
             except Exception as err:  # pylint: disable=broad-exception-caught
                 _LOGGER.debug(
@@ -324,6 +313,15 @@ class EntityPlatform:
                     self.platform_name,
                     exc_info=err,
                 )
+            return {}
+
+        self.entity_translations = await get_translations(hass.config.language)
+        if object_id_language == hass.config.language:
+            self.object_id_entity_translations = self.entity_translations
+        else:
+            self.object_id_entity_translations = await get_translations(
+                object_id_language
+            )
 
         logger.info("Setting up %s", full_name)
         warn_task = hass.loop.call_at(
